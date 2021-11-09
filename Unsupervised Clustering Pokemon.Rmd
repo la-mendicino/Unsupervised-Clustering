@@ -89,6 +89,11 @@ cut.pokemon <- cutree(hclust.pokemon, k = 3)
 ```
 
 ```{r}
+plot(hclust.pokemon)
+```
+
+
+```{r}
 table(km.pokemon$cluster, cut.pokemon)
 ```
 
