@@ -1,0 +1,202 @@
+---
+title: "Wisconsin Breast Cancer"
+author: "Lucas Mendicino"
+date: "11/10/2021"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+# Prepare the data
+```{r}
+WisconsinCancer <- read.csv("~/Desktop/WisconsinCancer.csv")
+View(WisconsinCancer)
+```
+
+```{r}
+wisc.data <- as.matrix(WisconsinCancer[3:32])
+
+# Set the row names of wisc.data
+row.names(wisc.data) <- WisconsinCancer$id
+
+# Create diagnosis vector
+diagnosis <- as.numeric(WisconsinCancer$diagnosis == ifelse(1, "M", 0))
+```
+
+# Exploratory Data Analysis
+
+```{r}
+str(wisc.data)
+sum(diagnosis)
+```
+
+There are 569 observations, with 10 variables representing mean measurements. 212 observations are malignant tumors
+
+# PCA
+
+Let's check the means and standard deviations to see if we need to scale the observations
+```{r}
+colMeans(wisc.data)
+```
+
+```{r}
+apply(wisc.data, 2, sd)
+```
+
+The data should be scaled since some measurements have different variances
+```{r}
+wisc.pca <- prcomp(wisc.data, scale = TRUE)
+summary(wisc.pca)
+```
+
+Let's visualize with a biplot
+```{r}
+biplot(wisc.pca)
+
+# Scatter plot observations by components 1 and 2
+plot(wisc.pca$x[, c(1, 2)], col = (diagnosis + 1), 
+     xlab = "PC1", ylab = "PC2")
+
+# Repeat for components 1 and 3
+plot(wisc.pca$x[, c(1, 3)], col = (diagnosis + 1), 
+     xlab = "PC1", ylab = "PC3")
+```
+
+Let's visualize the variance explained by the principle components using scree plots. 
+```{r}
+# Set up 1 x 2 plotting grid
+par(mfrow = c(1, 2))
+
+# Calculate variability of each component
+pca.var <- wisc.pca$sdev^2
+
+# Variance explained by each principal component: pve
+pve <- pca.var / sum(pca.var)
+
+# Plot variance explained for each principal component
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "b")
+
+# Plot cumulative proportion of variance explained
+plot(cumsum(pve), xlab = "Principal Component", 
+     ylab = "Cumulative Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "b")
+```
+
+The first 5 principle components are needed to explain 80% of the variance in the data
+
+# Hierarchical Clustering
+
+Let's scale the data and calculate distances
+```{r}
+wisc.scaled <- scale(wisc.data)
+wisc.dist <- dist(wisc.scaled)
+```
+
+Run HC
+```{r}
+wisc.hclust <- hclust(wisc.dist, method = "complete")
+
+```
+
+visualize
+
+```{r}
+plot(wisc.hclust)
+```
+The model has 4 clusters at height = 20
+
+Let's cut the tree to it has 4 clusters and compare to actual diagnosis
+
+```{r}
+wisc.hclust.clusters <- cutree(wisc.hclust, k = 4)
+table(wisc.hclust.clusters, diagnosis)
+```
+
+
+
+# K-Means Clustering
+
+create the model
+
+```{r}
+wisc.km <- kmeans(wisc.scaled, center = 2, nstart = 20)
+```
+
+Compare to actual diagnosis and hierarchical clustering
+
+```{r}
+table(wisc.km$cluster, diagnosis)
+
+table(wisc.km$cluster, wisc.hclust.clusters)
+```
+
+It seems clusters 1, 2, and 4 from HC can be seen as cluster 1 from k-means and cluster 3 from HC can be interpreted at cluster 2 from k-means
+
+
+
+# Combine PCA and Clustering
+
+Let's put together our previous work. In PCA, the model required 5 features to describe 80% of the variance and 7 to describe 90%. PCA helps to reduce overfitting and can also uncorrlate the features. Let's see how PCA can improve HC as a preprocessing step.
+
+```{r}
+wisc.pca.hclust <- hclust(dist(wisc.pca$x[, 1:7]), method = "complete")
+
+```
+
+```{r}
+# Cut model into 4 clusters: wisc.pr.hclust.clusters
+wisc.pca.hclust.clusters <- cutree(wisc.pca.hclust, k = 4)
+
+# Compare to actual diagnoses
+table(diagnosis, wisc.pca.hclust.clusters)
+
+# Compare to k-means and hierarchical
+table(diagnosis, wisc.pca.hclust.clusters)
+table(diagnosis, wisc.km$cluster)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Contrast results of Hierarchical Clustering with diagnosis
+
+# Compare Hierarchical and K-Means Clustering results
+
+# Using PCA as a pre-processing step for clustering
+
+
+
+
+
+
+
+
+
+
